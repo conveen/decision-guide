@@ -1,0 +1,15 @@
+:root {
+    font-family: Roboto, sans-serif;
+    line-height: 1.5;
+    font-weight: 400;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+}
+
+#app {
+    width: 100%;
+    min-height: 100vh;
+}
