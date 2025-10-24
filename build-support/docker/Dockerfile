@@ -45,6 +45,14 @@ COPY build-support/docker/install-nodejs.sh /build-support/docker/install-nodejs
 RUN USERNAME=$USERNAME \
     /build-support/docker/install-nodejs.sh
 
+# Install Terraform
+COPY build-support/docker/install-terraform.sh /build-support/docker/install-terraform.sh
+RUN /build-support/docker/install-terraform.sh
+
+# Install AWS CLI
+COPY build-support/docker/install-aws-cli.sh /build-support/docker/install-aws-cli.sh
+RUN /build-support/docker/install-aws-cli.sh
+
 FROM js_base AS build
 
 ENTRYPOINT ["./run.sh"]
