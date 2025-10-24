@@ -66,6 +66,58 @@
             </v-col>
         </v-row>
 
+        <!-- Validation Alerts and Actions (shown for both views) -->
+        <v-row>
+            <v-col cols="12">
+                <v-alert
+                    v-if="!weightsValid && decision.dimensions.length > 0"
+                    type="warning"
+                    density="compact"
+                    class="mb-3"
+                >
+                    <span class="text-body-2">
+                        Dimension weights must add up to exactly 1.00 (currently: {{ formatWeight(totalWeight) }})
+                    </span>
+                </v-alert>
+
+                <v-alert
+                    v-if="!scalesValid && decision.dimensions.length > 0"
+                    type="warning"
+                    density="compact"
+                    class="mb-3"
+                >
+                    <span class="text-body-2">
+                        All dimensions must have scale minimum and maximum values defined.
+                    </span>
+                </v-alert>
+
+                <v-alert v-if="decision.scenarios.length < 2" type="info" density="compact" class="mb-3">
+                    <span class="text-body-2">
+                        Add at least two scenarios to compare. Each scenario represents a possible choice for your
+                        decision.
+                    </span>
+                </v-alert>
+
+                <div v-if="canFillRemainingWeights" class="mb-4 d-flex justify-end">
+                    <v-tooltip location="bottom">
+                        <template #activator="{ props: tooltipProps }">
+                            <v-btn
+                                v-bind="tooltipProps"
+                                color="secondary"
+                                prepend-icon="mdi-auto-fix"
+                                @click="fillRemainingWeights"
+                            >
+                                Fill Remaining Weights
+                            </v-btn>
+                        </template>
+                        <span :class="isDarkMode ? 'text-primary' : 'text-black'">
+                            Automatically distribute remaining weight to dimensions with 0 weight
+                        </span>
+                    </v-tooltip>
+                </div>
+            </v-col>
+        </v-row>
+
         <!-- Tabs -->
         <v-row v-show="viewMode === 'tabs'">
             <v-col cols="12">
@@ -336,6 +388,7 @@ import { ref, computed, onMounted, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useDecisionsStore } from "@/stores/decisions";
 import { useTheme } from "vuetify";
+import { distributeRemainingWeight, formatNumber } from "@/utils/scoring";
 import { createShareableUrl, decodeDecision } from "@/utils/urlEncoding";
 import { validateScales, validateWeights, calculateScores } from "@/utils/scoring";
 import DimensionsTab from "@/components/DimensionsTab.vue";
@@ -404,6 +457,21 @@ const isMatrixValid = computed(() => {
         decision.value.dimensions.length > 0 &&
         decision.value.scenarios.length >= 2
     );
+});
+
+const totalWeight = computed(() => {
+    if (!decision.value) return 0;
+    return decision.value.dimensions.reduce((sum, dim) => sum + dim.weight, 0);
+});
+
+const weightsValid = computed(() => {
+    if (!decision.value) return true;
+    return validateWeights(decision.value.dimensions);
+});
+
+const scalesValid = computed(() => {
+    if (!decision.value) return true;
+    return validateScales(decision.value.dimensions);
 });
 
 const isDarkMode = computed(() => {
@@ -491,4 +559,28 @@ function getScenarioScore(dimId: string, scenarioId: string): number {
     const scenario = decision.value?.scenarios.find(s => s.id === scenarioId);
     return scenario?.scores[dimId] || 0;
 }
+
+const canFillRemainingWeights = computed(() => {
+    if (!decision.value) return false;
+    return decision.value.dimensions.some(dim => dim.weight === 0);
+});
+
+function fillRemainingWeights() {
+    if (!decision.value) return;
+
+    const zeroWeightIndices = decision.value.dimensions
+        .map((dim, idx) => (dim.weight === 0 ? idx : -1))
+        .filter(idx => idx !== -1);
+
+    const newWeights = distributeRemainingWeight(decision.value.dimensions, zeroWeightIndices);
+
+    decision.value.dimensions.forEach((dim, idx) => {
+        store.updateDimension(decision.value!.id, dim.id, { weight: newWeights[idx] });
+    });
+
+    showSnackbar.value = true;
+    snackbarMessage.value = `Distributed ${formatNumber(1.0 - totalWeight.value)} weight to ${zeroWeightIndices.length} dimension${zeroWeightIndices.length > 1 ? "s" : ""}`;
+}
+
+const formatWeight = formatNumber;
 </script>

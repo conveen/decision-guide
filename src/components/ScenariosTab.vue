@@ -14,11 +14,6 @@
                 </v-card-title>
 
                 <v-card-text>
-                    <v-alert v-if="decision.scenarios.length < 2" type="info" class="mb-4">
-                        Add at least two scenarios to compare. Each scenario represents a possible choice for your
-                        decision.
-                    </v-alert>
-
                     <v-row v-if="decision.scenarios.length > 0">
                         <v-col v-for="scenario in decision.scenarios" :key="scenario.id" cols="12" md="6" lg="4">
                             <v-card variant="outlined">

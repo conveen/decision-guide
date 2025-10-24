@@ -9,30 +9,11 @@
                             <v-btn color="primary" prepend-icon="mdi-plus" @click="showAddDialog = true">
                                 Add Dimension
                             </v-btn>
-                            <v-btn
-                                v-if="decision.dimensions.length > 0"
-                                color="secondary"
-                                prepend-icon="mdi-auto-fix"
-                                :disabled="!canFillRemainingWeights"
-                                class="ml-2"
-                                @click="fillRemainingWeights"
-                            >
-                                Fill Remaining Weights
-                            </v-btn>
                         </v-col>
                     </v-row>
                 </v-card-title>
 
                 <v-card-text>
-                    <v-alert v-if="!weightsValid" type="warning" class="mb-4">
-                        Dimension weights must add up to exactly 1.00 (currently:
-                        {{ formatNumber(totalWeight) }})
-                    </v-alert>
-
-                    <v-alert v-if="!scalesValid && decision.dimensions.length > 0" type="warning" class="mb-4">
-                        All dimensions must have scale minimum and maximum values defined.
-                    </v-alert>
-
                     <v-alert v-if="decision.dimensions.length === 0" type="info">
                         Add dimensions that factor into your decision. Each dimension should have a weight from 0.0 to
                         1.0, and all weights must sum to 1.0.
@@ -183,35 +164,19 @@
             </v-card-actions>
         </v-card>
     </v-dialog>
-
-    <v-snackbar
-        v-model="showSnackbar"
-        color="surface"
-        :text-color="isDarkMode ? 'primary' : 'on-surface'"
-        class="text-center"
-    >
-        <div class="text-center">
-            {{ snackbarMessage }}
-        </div>
-    </v-snackbar>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref } from "vue";
 import { useDecisionsStore } from "@/stores/decisions";
-import { useTheme } from "vuetify";
-import { validateWeights, validateScales, formatNumber, distributeRemainingWeight } from "@/utils/scoring";
 import type { Decision, Dimension } from "@/types";
 
 const props = defineProps<{ decision: Decision }>();
 const emit = defineEmits<{ update: [] }>();
 
 const store = useDecisionsStore();
-const theme = useTheme();
 
 const showAddDialog = ref(false);
-const showSnackbar = ref(false);
-const snackbarMessage = ref("");
 
 const newDimension = ref({
     name: "",
@@ -219,26 +184,6 @@ const newDimension = ref({
     weight: 0.0,
     scaleMin: 0.0,
     scaleMax: 10.0,
-});
-
-const totalWeight = computed(() => {
-    return props.decision.dimensions.reduce((sum, dim) => sum + dim.weight, 0);
-});
-
-const weightsValid = computed(() => {
-    return validateWeights(props.decision.dimensions);
-});
-
-const scalesValid = computed(() => {
-    return validateScales(props.decision.dimensions);
-});
-
-const canFillRemainingWeights = computed(() => {
-    return props.decision.dimensions.some(dim => dim.weight === 0);
-});
-
-const isDarkMode = computed(() => {
-    return theme.global.name.value === "nordDark";
 });
 
 function emitUpdate() {
@@ -276,34 +221,5 @@ function deleteDimension(index: number) {
         store.deleteDimension(props.decision.id, dimension.id);
         emitUpdate();
     }
-}
-
-function fillRemainingWeights() {
-    // Find dimensions with 0 weight
-    const zeroWeightIndices = props.decision.dimensions
-        .map((dim, idx) => (dim.weight === 0 ? idx : -1))
-        .filter(idx => idx !== -1);
-
-    if (zeroWeightIndices.length === 0) {
-        snackbarMessage.value = "No dimensions with 0 weight found";
-        showSnackbar.value = true;
-        return;
-    }
-
-    // Calculate remaining weight BEFORE updating
-    const totalRemaining = 1.0 - totalWeight.value;
-
-    const newWeights = distributeRemainingWeight(props.decision.dimensions, zeroWeightIndices);
-
-    props.decision.dimensions.forEach((dim, idx) => {
-        store.updateDimension(props.decision.id, dim.id, { weight: newWeights[idx] });
-    });
-
-    snackbarMessage.value = `Distributed ${formatNumber(totalRemaining)} weight to ${zeroWeightIndices.length} dimension${
-        zeroWeightIndices.length > 1 ? "s" : ""
-    }`;
-    showSnackbar.value = true;
-
-    emitUpdate();
 }
 </script>
