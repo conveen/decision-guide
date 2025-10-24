@@ -3,7 +3,7 @@
         <!-- Header -->
         <v-row>
             <v-col cols="12">
-                <v-btn prepend-icon="mdi-arrow-left" @click="goBack">Back</v-btn>
+                <v-btn prepend-icon="mdi-arrow-left" @click="goBack"> Back </v-btn>
             </v-col>
         </v-row>
 
@@ -42,15 +42,15 @@
                         >
                             <v-btn value="tabs" prepend-icon="mdi-tab">
                                 <v-tooltip text="Tab View" location="bottom">
-                                    <template v-slot:activator="{ props }">
-                                        <span v-bind="props">Tabs</span>
+                                    <template #activator="{ props: tooltipProps }">
+                                        <span v-bind="tooltipProps">Tabs</span>
                                     </template>
                                 </v-tooltip>
                             </v-btn>
                             <v-btn value="matrix" prepend-icon="mdi-table">
                                 <v-tooltip text="Matrix View" location="bottom">
-                                    <template v-slot:activator="{ props }">
-                                        <span v-bind="props">Matrix</span>
+                                    <template #activator="{ props: tooltipProps }">
+                                        <span v-bind="tooltipProps">Matrix</span>
                                     </template>
                                 </v-tooltip>
                             </v-btn>
@@ -58,9 +58,9 @@
 
                         <v-spacer />
 
-                        <v-btn prepend-icon="mdi-share-variant" @click="shareDecision">Share</v-btn>
-                        <v-btn prepend-icon="mdi-content-copy" @click="duplicateDecision">Duplicate</v-btn>
-                        <v-btn color="error" prepend-icon="mdi-delete" @click="deleteDecision">Delete</v-btn>
+                        <v-btn prepend-icon="mdi-share-variant" @click="shareDecision"> Share </v-btn>
+                        <v-btn prepend-icon="mdi-content-copy" @click="duplicateDecision"> Duplicate </v-btn>
+                        <v-btn color="error" prepend-icon="mdi-delete" @click="deleteDecision"> Delete </v-btn>
                     </v-card-actions>
                 </v-card>
             </v-col>
@@ -70,10 +70,10 @@
         <v-row v-show="viewMode === 'tabs'">
             <v-col cols="12">
                 <v-tabs v-model="activeTab" bg-color="primary">
-                    <v-tab value="dimensions">Dimensions</v-tab>
-                    <v-tab value="scenarios">Scenarios</v-tab>
-                    <v-tab value="scores" :disabled="!canEnterScores">Scores</v-tab>
-                    <v-tab value="results" :disabled="!canCalculate">Results</v-tab>
+                    <v-tab value="dimensions"> Dimensions </v-tab>
+                    <v-tab value="scenarios"> Scenarios </v-tab>
+                    <v-tab value="scores" :disabled="!canEnterScores"> Scores </v-tab>
+                    <v-tab value="results" :disabled="!canCalculate"> Results </v-tab>
                 </v-tabs>
             </v-col>
         </v-row>
@@ -134,14 +134,14 @@
                                         placeholder="Scenario name"
                                         @blur="saveDecision"
                                     >
-                                        <template v-slot:append>
+                                        <template #append>
                                             <v-btn
                                                 icon="mdi-close"
                                                 size="x-small"
                                                 variant="text"
-                                                @click="store.deleteScenario(decision.id, scenario.id)"
                                                 :disabled="decision.scenarios.length <= 1"
-                                            ></v-btn>
+                                                @click="store.deleteScenario(decision.id, scenario.id)"
+                                            />
                                         </template>
                                     </v-text-field>
                                 </th>
@@ -151,9 +151,9 @@
                                         size="small"
                                         variant="tonal"
                                         color="primary"
-                                        @click="store.addScenario(decision.id, { name: '', notes: '' })"
                                         title="Add scenario"
-                                    ></v-btn>
+                                        @click="store.addScenario(decision.id, { name: '', notes: '' })"
+                                    />
                                 </th>
                             </tr>
                         </thead>
@@ -167,7 +167,7 @@
                                         hide-details
                                         placeholder="Dimension name"
                                         @blur="saveDecision"
-                                    ></v-text-field>
+                                    />
                                 </td>
                                 <td>
                                     <v-text-field
@@ -179,7 +179,7 @@
                                         hide-details
                                         :rules="[v => (v >= 0 && v <= 1) || 'Weight must be 0-1']"
                                         @blur="saveDecision"
-                                    ></v-text-field>
+                                    />
                                 </td>
                                 <td>
                                     <v-text-field
@@ -190,7 +190,7 @@
                                         variant="outlined"
                                         hide-details
                                         @blur="saveDecision"
-                                    ></v-text-field>
+                                    />
                                 </td>
                                 <td>
                                     <v-text-field
@@ -201,14 +201,11 @@
                                         variant="outlined"
                                         hide-details
                                         @blur="saveDecision"
-                                    ></v-text-field>
+                                    />
                                 </td>
                                 <td v-for="scenario in decision.scenarios" :key="scenario.id">
                                     <v-text-field
                                         :model-value="getScenarioScore(dimension.id, scenario.id)"
-                                        @update:model-value="
-                                            store.setScenarioScore(decision.id, scenario.id, dimension.id, $event)
-                                        "
                                         type="number"
                                         density="compact"
                                         variant="outlined"
@@ -218,7 +215,19 @@
                                                 (v >= dimension.scaleMin && v <= dimension.scaleMax) ||
                                                 `Score must be ${dimension.scaleMin}-${dimension.scaleMax}`,
                                         ]"
-                                    ></v-text-field>
+                                        @update:model-value="
+                                            ($event: string | number) => {
+                                                if (decision) {
+                                                    store.setScenarioScore(
+                                                        decision.id,
+                                                        scenario.id,
+                                                        dimension.id,
+                                                        typeof $event === 'string' ? parseFloat($event) || 0 : $event,
+                                                    );
+                                                }
+                                            }
+                                        "
+                                    />
                                 </td>
                                 <td>
                                     <v-btn
@@ -226,9 +235,9 @@
                                         size="x-small"
                                         variant="text"
                                         color="error"
-                                        @click="store.deleteDimension(decision.id, dimension.id)"
                                         :disabled="decision.dimensions.length <= 1"
-                                    ></v-btn>
+                                        @click="store.deleteDimension(decision.id, dimension.id)"
+                                    />
                                 </td>
                             </tr>
                         </tbody>
@@ -256,7 +265,7 @@
 
             <!-- Calculate Button -->
             <div class="text-center mb-6">
-                <v-btn color="primary" size="large" @click="calculateMatrixResults" :disabled="!isMatrixValid">
+                <v-btn color="primary" size="large" :disabled="!isMatrixValid" @click="calculateMatrixResults">
                     Calculate Results
                 </v-btn>
             </div>
@@ -294,21 +303,29 @@
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer />
-                    <v-btn @click="showShareDialog = false">Close</v-btn>
+                    <v-btn @click="showShareDialog = false"> Close </v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
 
-        <v-snackbar v-model="showSnackbar" :timeout="3000">
-            {{ snackbarMessage }}
+        <v-snackbar
+            v-model="showSnackbar"
+            :timeout="3000"
+            color="surface"
+            :text-color="isDarkMode ? 'primary' : 'on-surface'"
+            class="text-center"
+        >
+            <div class="text-center">
+                {{ snackbarMessage }}
+            </div>
         </v-snackbar>
     </v-container>
 
     <v-container v-else>
         <v-row>
             <v-col cols="12">
-                <v-alert type="error">Decision not found</v-alert>
-                <v-btn prepend-icon="mdi-arrow-left" class="mt-4" @click="goBack">Back to Home</v-btn>
+                <v-alert type="error"> Decision not found </v-alert>
+                <v-btn prepend-icon="mdi-arrow-left" class="mt-4" @click="goBack"> Back to Home </v-btn>
             </v-col>
         </v-row>
     </v-container>
@@ -318,6 +335,7 @@
 import { ref, computed, onMounted, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useDecisionsStore } from "@/stores/decisions";
+import { useTheme } from "vuetify";
 import { createShareableUrl, decodeDecision } from "@/utils/urlEncoding";
 import { validateScales, validateWeights, calculateScores } from "@/utils/scoring";
 import DimensionsTab from "@/components/DimensionsTab.vue";
@@ -325,13 +343,14 @@ import ScenariosTab from "@/components/ScenariosTab.vue";
 import ScoresTab from "@/components/ScoresTab.vue";
 import ResultsTab from "@/components/ResultsTab.vue";
 import ResultsDisplay from "@/components/ResultsDisplay.vue";
-import type { Decision } from "@/types";
+import type { Decision, CalculationResult } from "@/types";
 
 const props = defineProps<{ id: string }>();
 
 const router = useRouter();
 const route = useRoute();
 const store = useDecisionsStore();
+const theme = useTheme();
 
 const decision = ref<Decision | null>(null);
 const activeTab = ref("dimensions");
@@ -385,6 +404,10 @@ const isMatrixValid = computed(() => {
         decision.value.dimensions.length > 0 &&
         decision.value.scenarios.length >= 2
     );
+});
+
+const isDarkMode = computed(() => {
+    return theme.global.name.value === "nordDark";
 });
 
 onMounted(() => {

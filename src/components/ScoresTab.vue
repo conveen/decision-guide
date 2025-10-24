@@ -27,7 +27,9 @@
                             <tbody>
                                 <tr v-for="dimension in decision.dimensions" :key="dimension.id">
                                     <td>
-                                        <div class="font-weight-bold">{{ dimension.name }}</div>
+                                        <div class="font-weight-bold">
+                                            {{ dimension.name }}
+                                        </div>
                                         <div v-if="dimension.description" class="text-caption text-grey">
                                             {{ dimension.description }}
                                         </div>

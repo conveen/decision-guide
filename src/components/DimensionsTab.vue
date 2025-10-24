@@ -13,10 +13,11 @@
                                 v-if="decision.dimensions.length > 0"
                                 color="secondary"
                                 prepend-icon="mdi-auto-fix"
+                                :disabled="!canFillRemainingWeights"
                                 class="ml-2"
-                                @click="showBatchAdjustDialog = true"
+                                @click="fillRemainingWeights"
                             >
-                                Batch Adjust Weights
+                                Fill Remaining Weights
                             </v-btn>
                         </v-col>
                     </v-row>
@@ -177,54 +178,28 @@
             </v-card-text>
             <v-card-actions>
                 <v-spacer />
-                <v-btn @click="showAddDialog = false">Cancel</v-btn>
-                <v-btn color="primary" :disabled="!newDimension.name" @click="addDimension">Add</v-btn>
+                <v-btn @click="showAddDialog = false"> Cancel </v-btn>
+                <v-btn color="primary" :disabled="!newDimension.name" @click="addDimension"> Add </v-btn>
             </v-card-actions>
         </v-card>
     </v-dialog>
 
-    <!-- Batch Adjust Weights Dialog -->
-    <v-dialog v-model="showBatchAdjustDialog" max-width="600">
-        <v-card>
-            <v-card-title>Batch Adjust Weights</v-card-title>
-            <v-card-text>
-                <p class="mb-4">
-                    Select dimensions to adjust, and the remaining weight will be distributed equally among them.
-                </p>
-                <v-list>
-                    <v-list-item v-for="(dimension, index) in decision.dimensions" :key="dimension.id">
-                        <v-checkbox
-                            v-model="selectedDimensionsForBatch"
-                            :value="index"
-                            :label="`${dimension.name} (current: ${formatNumber(dimension.weight)})`"
-                            hide-details
-                        />
-                    </v-list-item>
-                </v-list>
-                <v-divider class="my-4" />
-                <p class="text-body-2">
-                    Remaining weight: {{ formatNumber(remainingWeight) }}<br />
-                    Equal share per selected dimension: {{ formatNumber(equalShare) }}
-                </p>
-            </v-card-text>
-            <v-card-actions>
-                <v-spacer />
-                <v-btn @click="showBatchAdjustDialog = false">Cancel</v-btn>
-                <v-btn
-                    color="primary"
-                    :disabled="selectedDimensionsForBatch.length === 0"
-                    @click="applyBatchAdjustment"
-                >
-                    Apply
-                </v-btn>
-            </v-card-actions>
-        </v-card>
-    </v-dialog>
+    <v-snackbar
+        v-model="showSnackbar"
+        color="surface"
+        :text-color="isDarkMode ? 'primary' : 'on-surface'"
+        class="text-center"
+    >
+        <div class="text-center">
+            {{ snackbarMessage }}
+        </div>
+    </v-snackbar>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import { useDecisionsStore } from "@/stores/decisions";
+import { useTheme } from "vuetify";
 import { validateWeights, validateScales, formatNumber, distributeRemainingWeight } from "@/utils/scoring";
 import type { Decision, Dimension } from "@/types";
 
@@ -232,10 +207,11 @@ const props = defineProps<{ decision: Decision }>();
 const emit = defineEmits<{ update: [] }>();
 
 const store = useDecisionsStore();
+const theme = useTheme();
 
 const showAddDialog = ref(false);
-const showBatchAdjustDialog = ref(false);
-const selectedDimensionsForBatch = ref<number[]>([]);
+const showSnackbar = ref(false);
+const snackbarMessage = ref("");
 
 const newDimension = ref({
     name: "",
@@ -257,14 +233,12 @@ const scalesValid = computed(() => {
     return validateScales(props.decision.dimensions);
 });
 
-const remainingWeight = computed(() => {
-    const used = selectedDimensionsForBatch.value.reduce((sum, idx) => sum + props.decision.dimensions[idx].weight, 0);
-    return 1.0 - used;
+const canFillRemainingWeights = computed(() => {
+    return props.decision.dimensions.some(dim => dim.weight === 0);
 });
 
-const equalShare = computed(() => {
-    if (selectedDimensionsForBatch.value.length === 0) return 0;
-    return remainingWeight.value / selectedDimensionsForBatch.value.length;
+const isDarkMode = computed(() => {
+    return theme.global.name.value === "nordDark";
 });
 
 function emitUpdate() {
@@ -304,15 +278,32 @@ function deleteDimension(index: number) {
     }
 }
 
-function applyBatchAdjustment() {
-    const newWeights = distributeRemainingWeight(props.decision.dimensions, selectedDimensionsForBatch.value);
+function fillRemainingWeights() {
+    // Find dimensions with 0 weight
+    const zeroWeightIndices = props.decision.dimensions
+        .map((dim, idx) => (dim.weight === 0 ? idx : -1))
+        .filter(idx => idx !== -1);
+
+    if (zeroWeightIndices.length === 0) {
+        snackbarMessage.value = "No dimensions with 0 weight found";
+        showSnackbar.value = true;
+        return;
+    }
+
+    // Calculate remaining weight BEFORE updating
+    const totalRemaining = 1.0 - totalWeight.value;
+
+    const newWeights = distributeRemainingWeight(props.decision.dimensions, zeroWeightIndices);
 
     props.decision.dimensions.forEach((dim, idx) => {
         store.updateDimension(props.decision.id, dim.id, { weight: newWeights[idx] });
     });
 
-    showBatchAdjustDialog.value = false;
-    selectedDimensionsForBatch.value = [];
+    snackbarMessage.value = `Distributed ${formatNumber(totalRemaining)} weight to ${zeroWeightIndices.length} dimension${
+        zeroWeightIndices.length > 1 ? "s" : ""
+    }`;
+    showSnackbar.value = true;
+
     emitUpdate();
 }
 </script>

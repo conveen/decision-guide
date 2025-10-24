@@ -4,15 +4,15 @@
             <v-app-bar-nav-icon @click="goHome">
                 <v-icon>mdi-scale-balance</v-icon>
             </v-app-bar-nav-icon>
-            <v-toolbar-title @click="goHome" style="cursor: pointer">Decision Guide</v-toolbar-title>
+            <v-toolbar-title style="cursor: pointer" @click="goHome"> Decision Guide </v-toolbar-title>
 
-            <v-spacer></v-spacer>
+            <v-spacer />
 
             <v-btn
                 :icon="isDarkMode ? 'mdi-weather-sunny' : 'mdi-weather-night'"
-                @click="toggleTheme"
                 :title="isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'"
-            ></v-btn>
+                @click="toggleTheme"
+            />
         </v-app-bar>
 
         <v-main>

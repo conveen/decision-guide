@@ -79,8 +79,8 @@
             </v-card-text>
             <v-card-actions>
                 <v-spacer />
-                <v-btn @click="showAddDialog = false">Cancel</v-btn>
-                <v-btn color="primary" :disabled="!newScenario.name" @click="addScenario">Add</v-btn>
+                <v-btn @click="showAddDialog = false"> Cancel </v-btn>
+                <v-btn color="primary" :disabled="!newScenario.name" @click="addScenario"> Add </v-btn>
             </v-card-actions>
         </v-card>
     </v-dialog>

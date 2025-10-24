@@ -21,7 +21,7 @@
                             {{ formatNumber(contribution.contribution * 100) }}%
                         </v-list-item-subtitle>
                         <template #prepend>
-                            <v-icon color="primary">mdi-star</v-icon>
+                            <v-icon color="primary"> mdi-star </v-icon>
                         </template>
                     </v-list-item>
                 </v-list>
@@ -86,7 +86,7 @@
 import { formatNumber } from "@/utils/scoring";
 import type { CalculationResult } from "@/types";
 
-const props = defineProps<{
+defineProps<{
     calculationResult: CalculationResult | null;
     emptyMessage?: string;
 }>();

@@ -38,7 +38,7 @@
             <v-col cols="12">
                 <v-card>
                     <v-card-text class="text-center pa-8">
-                        <v-icon size="64" color="grey">mdi-scale-balance</v-icon>
+                        <v-icon size="64" color="grey"> mdi-scale-balance </v-icon>
                         <p class="text-h6 mt-4">No decisions found</p>
                         <p class="text-body-2 text-grey">
                             {{
@@ -54,27 +54,29 @@
             <v-col v-for="decision in filteredDecisions" :key="decision.id" cols="12" md="6" lg="4">
                 <v-card hover @click="openDecision(decision.id)">
                     <v-card-title>{{ decision.title }}</v-card-title>
-                    <v-card-subtitle v-if="decision.description">{{ decision.description }}</v-card-subtitle>
+                    <v-card-subtitle v-if="decision.description">
+                        {{ decision.description }}
+                    </v-card-subtitle>
                     <v-card-text>
                         <div class="text-caption mb-2">
-                            <v-icon size="small">mdi-chart-box-outline</v-icon>
+                            <v-icon size="small"> mdi-chart-box-outline </v-icon>
                             {{ decision.dimensions.length }} dimension{{ decision.dimensions.length !== 1 ? "s" : "" }}
                         </div>
                         <div class="text-caption mb-2">
-                            <v-icon size="small">mdi-compare</v-icon>
+                            <v-icon size="small"> mdi-compare </v-icon>
                             {{ decision.scenarios.length }} scenario{{ decision.scenarios.length !== 1 ? "s" : "" }}
                         </div>
                         <div class="text-caption text-grey">Updated {{ formatDate(decision.updatedAt) }}</div>
                     </v-card-text>
                     <v-card-actions>
                         <v-menu>
-                            <template v-slot:activator="{ props }">
-                                <v-btn icon="mdi-dots-vertical" size="small" v-bind="props" @click.stop></v-btn>
+                            <template #activator="{ props }">
+                                <v-btn icon="mdi-dots-vertical" size="small" v-bind="props" @click.stop />
                             </template>
                             <v-list>
                                 <v-list-item @click.stop="duplicateDecisionHandler(decision.id)">
                                     <v-list-item-title>
-                                        <v-icon start>mdi-content-copy</v-icon>
+                                        <v-icon start> mdi-content-copy </v-icon>
                                         Duplicate
                                     </v-list-item-title>
                                 </v-list-item>
@@ -111,7 +113,7 @@
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer />
-                    <v-btn @click="showCreateDialog = false">Cancel</v-btn>
+                    <v-btn @click="showCreateDialog = false"> Cancel </v-btn>
                     <v-btn color="primary" :disabled="!newDecisionTitle" @click="createNewDecision"> Create </v-btn>
                 </v-card-actions>
             </v-card>
@@ -126,8 +128,8 @@
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer />
-                    <v-btn @click="showDeleteDialog = false">Cancel</v-btn>
-                    <v-btn color="error" @click="deleteDecisionHandler">Delete</v-btn>
+                    <v-btn @click="showDeleteDialog = false"> Cancel </v-btn>
+                    <v-btn color="error" @click="deleteDecisionHandler"> Delete </v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
@@ -145,18 +147,28 @@
                         density="comfortable"
                         prepend-icon="mdi-file-upload"
                     />
-                    <v-alert v-if="importError" type="error" class="mt-2">{{ importError }}</v-alert>
+                    <v-alert v-if="importError" type="error" class="mt-2">
+                        {{ importError }}
+                    </v-alert>
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer />
-                    <v-btn @click="closeImportDialog">Cancel</v-btn>
+                    <v-btn @click="closeImportDialog"> Cancel </v-btn>
                     <v-btn color="primary" :disabled="!importFile" @click="importDecisionsHandler"> Import </v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
 
-        <v-snackbar v-model="showSnackbar" :timeout="3000">
-            {{ snackbarMessage }}
+        <v-snackbar
+            v-model="showSnackbar"
+            :timeout="3000"
+            color="surface"
+            :text-color="isDarkMode ? 'primary' : 'on-surface'"
+            class="text-center"
+        >
+            <div class="text-center">
+                {{ snackbarMessage }}
+            </div>
         </v-snackbar>
     </v-container>
 </template>
@@ -165,10 +177,12 @@
 import { ref, computed } from "vue";
 import { useRouter } from "vue-router";
 import { useDecisionsStore } from "@/stores/decisions";
+import { useTheme } from "vuetify";
 import type { Decision } from "@/types";
 
 const router = useRouter();
 const store = useDecisionsStore();
+const theme = useTheme();
 
 const searchQuery = ref("");
 const showCreateDialog = ref(false);
@@ -177,7 +191,7 @@ const newDecisionDescription = ref("");
 const showDeleteDialog = ref(false);
 const decisionToDelete = ref<Decision | null>(null);
 const showImportDialog = ref(false);
-const importFile = ref<File[] | null>(null);
+const importFile = ref<File | null>(null);
 const importError = ref("");
 const showSnackbar = ref(false);
 const snackbarMessage = ref("");
@@ -191,6 +205,10 @@ const filteredDecisions = computed(() => {
     return decisions.value.filter(
         d => d.title.toLowerCase().includes(query) || d.description.toLowerCase().includes(query),
     );
+});
+
+const isDarkMode = computed(() => {
+    return theme.global.name.value === "nordDark";
 });
 
 function formatDate(timestamp: number): string {

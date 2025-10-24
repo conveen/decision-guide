@@ -70,6 +70,9 @@ export function calculateScores(decision: Decision): CalculationResult {
  * Validate that dimension weights sum to 1.0 (with small tolerance for floating point)
  */
 export function validateWeights(dimensions: { weight: number }[]): boolean {
+    // Empty array is considered valid (no weights to validate)
+    if (dimensions.length === 0) return true;
+
     const sum = dimensions.reduce((acc, dim) => acc + dim.weight, 0);
     return Math.abs(sum - 1.0) < 0.001;
 }
@@ -82,12 +85,18 @@ export function validateScales(dimensions: { scaleMin: number; scaleMax: number 
         dimension =>
             dimension.scaleMin !== null &&
             dimension.scaleMin !== undefined &&
-            dimension.scaleMin !== "" &&
+            String(dimension.scaleMin) !== "" &&
+            !Number.isNaN(dimension.scaleMin) &&
             dimension.scaleMax !== null &&
             dimension.scaleMax !== undefined &&
-            dimension.scaleMax !== "",
+            String(dimension.scaleMax) !== "" &&
+            !Number.isNaN(dimension.scaleMax),
     );
 }
+
+/**
+ * Validate that a score is within the dimension's scale
+ */
 
 /**
  * Validate that a score is within the dimension's scale
@@ -104,12 +113,15 @@ export function formatNumber(num: number): string {
 }
 
 /**
- * Distribute remaining weight equally across dimensions
+ * Fill remaining weight equally across selected dimensions
+ * Calculates total weight from ALL dimensions, then distributes remainder to selected ones
  */
 export function distributeRemainingWeight(dimensions: { weight: number }[], selectedIndices: number[]): number[] {
     const newWeights = dimensions.map(d => d.weight);
-    const usedWeight = selectedIndices.reduce((sum, idx) => sum + newWeights[idx], 0);
-    const remainingWeight = 1.0 - usedWeight;
+
+    // Calculate total weight from ALL dimensions
+    const totalWeight = newWeights.reduce((sum, w) => sum + w, 0);
+    const remainingWeight = 1.0 - totalWeight;
 
     if (selectedIndices.length === 0 || remainingWeight <= 0) {
         return newWeights;
