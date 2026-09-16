@@ -1,4 +1,4 @@
-import type { Decision, ScenarioResult, DimensionContribution, CalculationResult } from "@/types";
+import type { CalculationResult, Decision, DimensionContribution, ScenarioResult } from "@/types";
 
 /**
  * Normalize a score using min-max normalization

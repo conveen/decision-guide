@@ -1,13 +1,13 @@
-import { describe, it, expect } from "vitest";
-import {
-    normalizeScore,
-    calculateScores,
-    validateWeights,
-    validateScore,
-    formatNumber,
-    distributeRemainingWeight,
-} from "../scoring";
+import { describe, expect, it } from "vitest";
 import type { Decision } from "@/types";
+import {
+    calculateScores,
+    distributeRemainingWeight,
+    formatNumber,
+    normalizeScore,
+    validateScore,
+    validateWeights,
+} from "../scoring";
 
 describe("normalizeScore", () => {
     it("should normalize a score correctly", () => {

@@ -20,7 +20,6 @@ apt install -y \
     python3 \
     python3-pip
 
-sudo -Hiu $USERNAME bash -c '${HOME}/.asdf/bin/asdf plugin add nodejs https://github.com/asdf-vm/asdf-nodejs.git'
+sudo -Hiu $USERNAME bash -c 'asdf plugin add nodejs https://github.com/asdf-vm/asdf-nodejs.git'
 # Version must match .tool-versions
-sudo -Hiu $USERNAME bash -c 'source ${HOME}/.asdf/asdf.sh && ${HOME}/.asdf/bin/asdf install nodejs 22.20.0'
-sudo -Hiu $USERNAME bash -c 'source ${HOME}/.asdf/asdf.sh && ${HOME}/.asdf/bin/asdf global nodejs 22.20.0'
+sudo -Hiu "${USERNAME}" bash -c 'asdf install nodejs lts && asdf set --home nodejs lts'

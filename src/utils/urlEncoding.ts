@@ -1,4 +1,4 @@
-import pako from "pako";
+import { deflate, inflate } from "pako";
 import type { Decision } from "@/types";
 
 /**
@@ -7,7 +7,7 @@ import type { Decision } from "@/types";
 export function encodeDecision(decision: Decision): string {
     try {
         const json = JSON.stringify(decision);
-        const compressed = pako.deflate(json);
+        const compressed = deflate(json);
         const base64 = btoa(String.fromCharCode(...compressed));
         return encodeURIComponent(base64);
     } catch (error) {
@@ -23,7 +23,7 @@ export function decodeDecision(encoded: string): Decision {
     try {
         const base64 = decodeURIComponent(encoded);
         const compressed = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
-        const json = pako.inflate(compressed, { to: "string" });
+        const json = inflate(compressed, { toText: true });
         return JSON.parse(json);
     } catch (error) {
         console.error("Error decoding decision:", error);

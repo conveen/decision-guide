@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import { ref, computed } from "vue";
+import { computed, ref } from "vue";
 import type { Decision, Dimension, Scenario } from "@/types";
 
 const STORAGE_KEY = "decision-guide-decisions";

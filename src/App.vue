@@ -1,30 +1,38 @@
 <template>
-    <v-app>
-        <v-app-bar color="primary" prominent>
-            <v-app-bar-nav-icon @click="goHome">
-                <v-icon>mdi-scale-balance</v-icon>
-            </v-app-bar-nav-icon>
-            <v-toolbar-title style="cursor: pointer" @click="goHome"> Decision Guide </v-toolbar-title>
+  <v-app>
+    <v-app-bar
+      color="primary"
+      prominent
+    >
+      <v-app-bar-nav-icon @click="goHome">
+        <v-icon>mdi-scale-balance</v-icon>
+      </v-app-bar-nav-icon>
+      <v-toolbar-title
+        style="cursor: pointer"
+        @click="goHome"
+      >
+        Decision Guide
+      </v-toolbar-title>
 
-            <v-spacer />
+      <v-spacer />
 
-            <v-btn
-                :icon="isDarkMode ? 'mdi-weather-sunny' : 'mdi-weather-night'"
-                :title="isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'"
-                @click="toggleTheme"
-            />
-        </v-app-bar>
+      <v-btn
+        :icon="isDarkMode ? 'mdi-weather-sunny' : 'mdi-weather-night'"
+        :title="isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'"
+        @click="toggleTheme"
+      />
+    </v-app-bar>
 
-        <v-main>
-            <router-view />
-        </v-main>
-    </v-app>
+    <v-main>
+      <router-view />
+    </v-main>
+  </v-app>
 </template>
 
 <script setup lang="ts">
+import { computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useTheme } from "vuetify";
-import { computed, onMounted } from "vue";
 
 const router = useRouter();
 const theme = useTheme();
