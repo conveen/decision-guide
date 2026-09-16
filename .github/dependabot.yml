@@ -1,0 +1,30 @@
+version: 2
+updates:
+  # GitHub Actions workflow dependencies (the actions pinned by SHA in
+  # .github/workflows/*.yml).
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "ci"
+    labels:
+      - "dependencies"
+      - "github-actions"
+
+  # Frontend dependencies (root package.json).
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "npm"
+    labels:
+      - "dependencies"
+      - "javascript"
+    ignore:
+      # TypeScript 7 dropped the classic compiler API (no `exports` entry
+      # for it), which vue-tsc requires. Stay on the 6.x line until
+      # vue-tsc adds support.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
