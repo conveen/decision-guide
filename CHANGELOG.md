@@ -23,3 +23,16 @@ How to cut a release:
 -->
 
 ## [Unreleased]
+
+## [v0.1.0] - 2026-09-16
+
+### Added
+
+- Initial release of Decision Guide, a client-side, data-driven decision-making web app.
+- Create decisions with weighted dimensions and multiple scenarios, score
+  them, and see the winning scenario with its top contributing dimensions.
+- Batch weight adjustment to distribute remaining weight across selected
+  dimensions.
+- Shareable URLs encoding full decision state, plus JSON import/export and
+  decision duplication.
+- Persistent storage via browser localStorage; no backend required.
