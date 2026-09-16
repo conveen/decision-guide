@@ -1,0 +1,196 @@
+name: release
+
+# Builds the production Vite bundle, publishes it as a GitHub Release, and
+# deploys it to the `website` branch (served by GitHub Pages). Triggered by
+# pushing a `v`-prefixed semver tag (`v<major>.<minor>.<patch>`, e.g.
+# `v1.2.3` — no pre-release suffix) that points at a commit reachable from
+# `master`.
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+permissions: {}
+
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  # Independently re-validates the trigger: the tag must be exact semver
+  # (the push-tags glob is close but not battle-tested against edge cases like
+  # pre-release/build-metadata suffixes) and must point to a commit that is
+  # actually reachable from `master`, not merely tag-named to look like one.
+  verify:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository (full history)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify tag is exact semver v<major>.<minor>.<patch>
+        run: |
+          if ! [[ "${GITHUB_REF_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Tag '${GITHUB_REF_NAME}' is not a plain v<major>.<minor>.<patch> version" >&2
+            exit 1
+          fi
+
+      - name: Verify tag is reachable from master
+        run: |
+          if ! git merge-base --is-ancestor "${GITHUB_SHA}" origin/master; then
+            echo "::error::Tag '${GITHUB_REF_NAME}' (${GITHUB_SHA}) is not reachable from origin/master" >&2
+            exit 1
+          fi
+
+  build:
+    needs: verify
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    # run.sh is a bash entrypoint; force bash so it also works on Windows
+    # runners (resolves to the Git-for-Windows Git Bash bundled on hosted
+    # Windows runners — same pattern already used in run-ci.yml).
+    defaults:
+      run:
+        shell: bash
+    env:
+      # github.ref_name is already `v`-prefixed (e.g. `v1.2.3`).
+      LOG_FILE: build-output-${{ github.ref_name }}.log
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.ref }}
+          persist-credentials: false
+
+      - name: Install Node.js and npm
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build production bundle
+        run: npm run build 2>&1 | tee "${LOG_FILE}"
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dist
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: build-output-${{ github.ref_name }}
+          path: ${{ env.LOG_FILE }}
+          if-no-files-found: warn
+          retention-days: 7
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.ref }}
+          persist-credentials: false
+
+      - name: Download build artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dist
+          path: dist
+
+      - name: Extract release notes from CHANGELOG.md
+        run: |
+          awk -v ver="${GITHUB_REF_NAME}" '
+            $0 ~ "^## \\[" ver "\\]" { found=1; next }
+            found && /^## \[/ { exit }
+            found { print }
+          ' CHANGELOG.md > release-notes.md
+          if ! [ -s release-notes.md ]; then
+            echo "::error::No CHANGELOG.md section found for '## [${GITHUB_REF_NAME}]' — add one before tagging" >&2
+            exit 1
+          fi
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "${GITHUB_REF_NAME}" \
+            --notes-file release-notes.md \
+            --verify-tag \
+            dist/*
+
+  deploy-pages:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Download build artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dist
+          # Downloaded outside the checkout so it survives the working-tree
+          # wipe below (the checkout dir is about to become the `website`
+          # branch's tree).
+          path: ${{ runner.temp }}/dist
+
+      - name: Deploy bundle to website branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          if git fetch origin website
+          then
+            git checkout website
+          else
+            git checkout --orphan website
+            git reset --hard
+          fi
+
+          # Clear everything except VCS metadata and a manually-placed CNAME
+          # (GitHub Pages custom-domain file — not part of the build output,
+          # so it must survive every deploy).
+          find . -mindepth 1 -maxdepth 1 ! -name .git ! -name CNAME -exec rm -rf {} +
+
+          cp -r "${{ runner.temp }}/dist/." .
+
+          # GitHub Pages serves static files with no server-side rewrites, but
+          # the app uses HTML5 history routing (createWebHistory), so a direct
+          # or refreshed deep link (e.g. /decision/abc123) needs to fall back
+          # to index.html instead of getting a Pages 404.
+          cp index.html 404.html
+
+          # Skip Jekyll processing (GitHub Pages default for non-Jekyll sites).
+          touch .nojekyll
+
+          git add -A
+          if git diff --cached --quiet
+          then
+            echo "No changes to deploy"
+            exit 0
+          fi
+
+          git commit -m "Deploy ${GITHUB_REF_NAME} to GitHub Pages"
+          git push origin HEAD:website
