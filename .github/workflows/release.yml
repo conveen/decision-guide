@@ -52,12 +52,6 @@ jobs:
     permissions:
       contents: read
     runs-on: ubuntu-latest
-    # run.sh is a bash entrypoint; force bash so it also works on Windows
-    # runners (resolves to the Git-for-Windows Git Bash bundled on hosted
-    # Windows runners — same pattern already used in run-ci.yml).
-    defaults:
-      run:
-        shell: bash
     env:
       # github.ref_name is already `v`-prefixed (e.g. `v1.2.3`).
       LOG_FILE: build-output-${{ github.ref_name }}.log
@@ -79,11 +73,18 @@ jobs:
       - name: Build production bundle
         run: npm run build 2>&1 | tee "${LOG_FILE}"
 
+      - name: Archive dist directory
+        # A single zip (rather than the raw dist/ tree) so downstream jobs
+        # have one file to work with: `gh release create` can't upload a
+        # directory as an asset ("read dist/assets: is a directory"), which
+        # is what happened when this step uploaded dist/* directly.
+        run: (cd dist && zip -r ../production-bundle.zip .)
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: dist
-          path: dist/*
+          name: production-bundle
+          path: production-bundle.zip
           if-no-files-found: error
           retention-days: 7
 
@@ -111,8 +112,7 @@ jobs:
       - name: Download build artifact
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: dist
-          path: dist
+          name: production-bundle
 
       - name: Extract release notes from CHANGELOG.md
         run: |
@@ -122,7 +122,7 @@ jobs:
             found { print }
           ' CHANGELOG.md > release-notes.md
           if ! [ -s release-notes.md ]; then
-            echo "::error::No CHANGELOG.md section found for '## [${GITHUB_REF_NAME}]' — add one before tagging" >&2
+            echo "::error:: No CHANGELOG.md section found for '## [${GITHUB_REF_NAME}]' — add one before tagging" >&2
             exit 1
           fi
 
@@ -134,7 +134,7 @@ jobs:
             --title "${GITHUB_REF_NAME}" \
             --notes-file release-notes.md \
             --verify-tag \
-            dist/*
+            production-bundle.zip
 
   deploy-pages:
     needs: build
@@ -150,11 +150,14 @@ jobs:
       - name: Download build artifact
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: dist
+          name: production-bundle
           # Downloaded outside the checkout so it survives the working-tree
           # wipe below (the checkout dir is about to become the `website`
           # branch's tree).
-          path: ${{ runner.temp }}/dist
+          path: ${{ runner.temp }}
+
+      - name: Extract bundle archive
+        run: unzip -q "${{ runner.temp }}/production-bundle.zip" -d "${{ runner.temp }}/dist"
 
       - name: Deploy bundle to website branch
         run: |
