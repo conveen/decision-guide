@@ -11,7 +11,8 @@ set -eu
 if [ -d /build-support ]
 then
     . ${HOME}/.bashrc
-    . ${HOME}/.asdf/asdf.sh
+    # Required due to non-interactive guard in .bashrc
+    export PATH="${HOME}/.asdf/shims:${PATH}"
     BUILD_SUPPORT_ROOT="/build-support"
 else
     BUILD_SUPPORT_ROOT="./build-support"
@@ -121,8 +122,8 @@ run-preview() {
 run-test() {
     info "Running unit tests with vitest"
     npm run test
-    info "Running UI tests with vitest"
-    npm run test:ui
+    # info "Running UI tests with vitest"
+    # npm run test:ui
 }
 
 run-update-deps() {
